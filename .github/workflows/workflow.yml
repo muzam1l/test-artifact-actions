@@ -20,6 +20,10 @@ jobs:
           name: my-artifact
       - run: touch backup.txt
       - run: cat hello.txt > backup.txt
+      - uses : actions/upload-artifact@v3
+        with:
+          name: my-artifact
+          path: backup.txt
   download:
     needs: add
     runs-on: ubuntu-latest
