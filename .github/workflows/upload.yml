@@ -9,4 +9,5 @@ jobs:
     - run: echo "hello" > a/b/c/hello.txt
     - uses: actions/upload-artifact@v3
       with:
+        name: my-artifact
         path: a/b/c/hello.txt
