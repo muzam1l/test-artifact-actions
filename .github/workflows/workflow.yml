@@ -12,6 +12,7 @@ jobs:
         name: my-artifact
         path: a/b/c/hello.txt
   download:
+    needs: upload
     runs-on: ubuntu-latest
     steps:
     - uses: actions/download-artifact@v3
