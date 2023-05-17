@@ -1,0 +1,17 @@
+on:
+  workflow_dispatch: {}
+
+jobs:
+  job:
+    runs-on: ubuntu-latest
+    steps:
+    - run: mkdir -p a/b/c
+    - run: echo "hello" > a/b/c/hello.txt
+    - uses: actions/upload-artifact@v3
+      with:
+        path: a/b/c/hello.txt
+    - uses: actions/download-artifact@v3
+    - run: ls -a
+    - run: ls -a a/b/c
+    - run: cat a/b/c/hello.txt
+     
