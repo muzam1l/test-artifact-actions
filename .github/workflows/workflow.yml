@@ -11,13 +11,23 @@ jobs:
       with:
         name: my-artifact
         path: a/b/c/hello.txt
-  download:
+  add: 
     needs: upload
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v3
+        with:
+          name: my-artifact
+      - run: touch backup.txt
+      - run: cat hello.txt > backup.txt
+  download:
+    needs: add
     runs-on: ubuntu-latest
     steps:
     - uses: actions/download-artifact@v3
       with:
         name: my-artifact
     - run: ls -a
-    - run: cat hello.txt
+    - run: cat hello.txt backup.txt
+
      
