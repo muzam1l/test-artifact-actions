@@ -2,7 +2,7 @@ on:
   workflow_dispatch: {}
 
 jobs:
-  job:
+  upload:
     runs-on: ubuntu-latest
     steps:
     - run: mkdir -p a/b/c
