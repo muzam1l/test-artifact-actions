@@ -19,6 +19,5 @@ jobs:
       with:
         name: my-artifact
     - run: ls -a
-    - run: ls -a a/b/c
-    - run: cat a/b/c/hello.txt
+    - run: cat hello.txt
      
