@@ -33,5 +33,15 @@ jobs:
         name: my-artifact
     - run: ls -a
     - run: cat hello.txt backup.txt
+  checkout:
+    needs: download
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+  run:
+    needs: checkout
+    runs-on: ubuntu-latest
+    steps:
+    - run: ls -a
 
      
