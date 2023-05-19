@@ -32,16 +32,19 @@ jobs:
       with:
         name: my-artifact
     - run: ls -a
-    - run: cat hello.txt backup.txt
+    - run: pwd
   checkout:
     needs: download
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
+    - run: ls -a
+    - run: pwd
   run:
     needs: checkout
     runs-on: ubuntu-latest
     steps:
     - run: ls -a
+    - run: pwd
 
      
