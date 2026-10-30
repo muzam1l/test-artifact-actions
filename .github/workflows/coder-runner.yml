@@ -1,0 +1,26 @@
+name: Coder runner
+run-name: Coder runner ${{ inputs.task }}
+on:
+  workflow_dispatch:
+    inputs:
+      task: { required: true, type: string }
+      server: { required: true, type: string }
+      claim: { required: true, type: string }
+      tarball: { required: true, type: string }
+      hash: { required: true, type: string }
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    permissions: { id-token: write }
+    container: ghcr.io/muzam1l/coder-runner@sha256:8628b766c5f55c6bcabcbbe30123ca99ef68f5b43ea6b15304f12317dd2b2f75
+    steps:
+      - run: |
+          CODER_TASK_TOKEN=$(node -e 'const server = process.env.CODER_SERVER.replace(/\/+$/, ""); (async () => { const id = await fetch(process.env.ACTIONS_ID_TOKEN_REQUEST_URL + "&audience=" + encodeURIComponent(server), { headers: { authorization: "bearer " + process.env.ACTIONS_ID_TOKEN_REQUEST_TOKEN } }); if (!id.ok) throw new Error("GitHub gave no OIDC token: HTTP " + id.status); const identity = (await id.json()).value; for (let attempt = 0; ; attempt++) { const response = await fetch(server + "/tasks/" + encodeURIComponent(process.env.TASK) + "/claim", { method: "POST", signal: AbortSignal.timeout(30000), headers: { "content-type": "application/json" }, body: JSON.stringify({ claim: process.env.CODER_TASK_CLAIM, identity }) }); if (response.status === 409 && attempt < 10) { await new Promise(resolve => setTimeout(resolve, 3000)); continue; } if (!response.ok) throw new Error("The task claim was refused: HTTP " + response.status); return process.stdout.write((await response.json()).token); } })().catch(error => { console.error(error.message); process.exitCode = 1; });') || exit 1; export CODER_TASK_TOKEN; unset CODER_TASK_CLAIM
+          sh -c 'out=$(mktemp); { (if [ -n "$CODER_RUNNER_HASH" ] && [ -f .coder-runner/package.tgz ] && [ "$(cat .coder-runner/hash 2>/dev/null)" = "$CODER_RUNNER_HASH" ] && node -e '\''const fs=require("fs"),crypto=require("crypto");process.exit(/^[a-f0-9]{64}$/.test(process.env.CODER_RUNNER_HASH||"")&&crypto.createHash("sha256").update(fs.readFileSync(".coder-runner/package.tgz")).digest("hex")===process.env.CODER_RUNNER_HASH?0:1)'\''; then rm -rf .coder-runner/package && tar -xzf .coder-runner/package.tgz -C .coder-runner && mkdir -p .coder-runner/bin && printf '\''#!/bin/sh\nexec bun "$(dirname "$0")/../package/bin/coder.mjs" "$@"\n'\'' > .coder-runner/bin/coder && chmod +x .coder-runner/bin/coder; else mkdir -p .coder-runner && curl -fsSL --retry 2 --connect-timeout 10 --max-time 30 "${CODER_RUNNER_TARBALL_URL:?Runner package URL is required}" -o .coder-runner/package.tgz && { [ -z "$CODER_RUNNER_HASH" ] || node -e '\''const fs=require("fs"),crypto=require("crypto");process.exit(/^[a-f0-9]{64}$/.test(process.env.CODER_RUNNER_HASH||"")&&crypto.createHash("sha256").update(fs.readFileSync(".coder-runner/package.tgz")).digest("hex")===process.env.CODER_RUNNER_HASH?0:1)'\''; } && rm -rf .coder-runner/package && tar -xzf .coder-runner/package.tgz -C .coder-runner && mkdir -p .coder-runner/bin && printf '\''#!/bin/sh\nexec bun "$(dirname "$0")/../package/bin/coder.mjs" "$@"\n'\'' > .coder-runner/bin/coder && chmod +x .coder-runner/bin/coder && printf "%s" "$CODER_RUNNER_HASH" > .coder-runner/hash; fi && PATH="$PWD/.coder-runner/bin:$PATH" CODER_NO_UPDATE_CHECK=1 bun .coder-runner/package/bin/coder.mjs agent run --task "$1") 2>&1; echo $? >"$out.status"; } | tee "$out"; status=$(cat "$out.status"); [ "$status" = 0 ] || { [ -n "$CODER_PREPARE" ] || { if command -v node >/dev/null 2>&1; then node -e "$2" "$out" "$1"; else bun -e "$2" "$out" "$1"; fi; }; }; rm -f "$out" "$out.status"; exit "$status"' coder-task "$TASK" 'const [file, id] = process.argv.slice(1); const lines = require('\''fs'\'').readFileSync(file, '\''utf8'\'').split('\''\n'\'').map(line => line.trim()).filter(Boolean); const error = '\''The machine failed: '\'' + lines.slice(-6).join('\'' '\'').slice(-800); const login = process.env.CODER_LOGIN; const url = process.env.CODER_SERVER.replace(/\/+$/, '\'''\'') + (login ? '\''/logins/'\'' : '\''/tasks/'\'') + encodeURIComponent(id) + (login ? '\'''\'' : '\''/result'\''); fetch(url, {   method: '\''POST'\'', signal: AbortSignal.timeout(10000),   headers: { authorization: '\''Bearer '\'' + process.env.CODER_TASK_TOKEN, '\''content-type'\'': '\''application/json'\'' },   body: JSON.stringify(login ? { error } : { status: '\''failed'\'', error, machine: true }), }).then(response => { if (!response.ok) process.exitCode = 1; }).catch(() => { process.exitCode = 1; });'
+        env:
+          TASK: ${{ inputs.task }}
+          CODER_SERVER: ${{ inputs.server }}
+          CODER_TASK_CLAIM: ${{ inputs.claim }}
+          CODER_INBOX_MODE: poll
+          CODER_RUNNER_TARBALL_URL: ${{ inputs.tarball }}
+          CODER_RUNNER_HASH: ${{ inputs.hash }}
